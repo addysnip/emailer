@@ -1,0 +1,57 @@
+kind: pipeline
+type: kubernetes
+name: drone-pipeline
+
+trigger:
+  event:
+  - push
+  - pull_request
+  branches:
+  - main
+  - dev
+
+steps:
+- name: Test Build
+  image: golang:1.17
+  environment:
+    GH_USER:
+      from_secret: gh_user
+    GH_PAT:
+      from_secret: gh_pat
+  commands:
+  - echo "machine github.com login $GH_USER password $GH_PAT" > ~/.netrc
+  - export GOPRIVATE="addysnip.dev"
+  - go test
+  - go build .
+- name: build and push image
+  image: plugins/docker
+  settings:
+    username:
+      from_secret: DOCKER_USERNAME
+    password:
+      from_secret: DOCKER_PASSWORD
+    repo: addysnip/emailer
+    tags:
+    - ${DRONE_COMMIT_SHA:0:8}
+  when:
+    event:
+    - push
+    branch:
+    - main
+    - dev
+- name: deploy to cluster
+  pull: always
+  image: dhawton/drone-kubectl:latest
+  settings:
+    kubernetes_token:
+      from_secret: kubernetes_token
+    kubernetes_server:
+      from_secret: kubernetes_server
+  commands:
+  - kubectl set image deployment/emailer emailer=addysnip/emailer:${DRONE_COMMIT_SHA:0:8} -n addysnip
+  - kubectl rollout status deployment/emailer -n addysnip
+  when:
+    event:
+    - push
+    branch:
+    - main
