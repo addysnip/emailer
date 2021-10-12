@@ -63,5 +63,8 @@ func main() {
 		},
 	}
 
-	app.Run(os.Args)
+	err := app.Run(os.Args)
+	if err != nil {
+		logger.Category("main").Error("Error: %s", err.Error())
+	}
 }

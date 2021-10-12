@@ -22,8 +22,8 @@ steps:
   - echo "machine github.com login $GH_USER password $GH_PAT" > ~/.netrc
   - export GOPRIVATE="addysnip.dev"
   - go test
-  - go build .
-- name: build and push image
+  - make build
+- name: Build and Push Image
   image: plugins/docker
   settings:
     username:

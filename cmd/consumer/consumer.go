@@ -45,12 +45,12 @@ func Run(c *cli.Context) error {
 	}
 
 	q, err := ch.QueueDeclare(
-		"emailer", // name
-		true,      // durable
-		false,     // delete when unused
-		false,     // exclusive
-		false,     // no-wait
-		nil,       // arguments
+		utils.Getenv("RABBITMQ_QUEUE", "emailer"), // name
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
 	)
 	if err != nil {
 		return err
