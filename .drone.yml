@@ -26,7 +26,7 @@ steps:
 - name: Build and Push Image
   image: plugins/gcr
   settings:
-    repo: addysnip/api
+    repo: addysnip/emailer
     tags:
     - ${DRONE_COMMIT_SHA:0:8}
     json_key:
