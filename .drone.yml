@@ -24,22 +24,20 @@ steps:
   - go test
   - make build
 - name: Build and Push Image
-  image: plugins/docker
+  image: plugins/gcr
   settings:
-    username:
-      from_secret: DOCKER_USERNAME
-    password:
-      from_secret: DOCKER_PASSWORD
-    repo: addysnip/emailer
+    repo: addysnip/api
     tags:
     - ${DRONE_COMMIT_SHA:0:8}
+    json_key:
+      from_secret: gar_service_account_key
   when:
     event:
     - push
     branch:
     - main
     - dev
-- name: deploy to cluster
+- name: Deploy to Cluster
   pull: always
   image: dhawton/drone-kubectl:latest
   settings:
@@ -48,7 +46,23 @@ steps:
     kubernetes_server:
       from_secret: kubernetes_server
   commands:
-  - kubectl set image deployment/emailer emailer=addysnip/emailer:${DRONE_COMMIT_SHA:0:8} -n addysnip
+  - kubectl set image deployment/emailer emailer=gcr.io/addysnip/emailer:${DRONE_COMMIT_SHA:0:8} -n addysnip-dev
+  - kubectl rollout status deployment/emailer -n addysnip-dev
+  when:
+    event:
+    - push
+    branch:
+    - dev
+- name: Deploy to Cluster
+  pull: always
+  image: dhawton/drone-kubectl:latest
+  settings:
+    kubernetes_token:
+      from_secret: kubernetes_token
+    kubernetes_server:
+      from_secret: kubernetes_server
+  commands:
+  - kubectl set image deployment/emailer emailer=gcr.io/addysnip/emailer:${DRONE_COMMIT_SHA:0:8} -n addysnip
   - kubectl rollout status deployment/emailer -n addysnip
   when:
     event:
