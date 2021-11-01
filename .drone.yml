@@ -37,7 +37,7 @@ steps:
     branch:
     - main
     - dev
-- name: Deploy to Cluster
+- name: Deploy to Cluster (Dev)
   pull: always
   image: dhawton/drone-kubectl:latest
   settings:
@@ -53,7 +53,7 @@ steps:
     - push
     branch:
     - dev
-- name: Deploy to Cluster
+- name: Deploy to Cluster (Prod)
   pull: always
   image: dhawton/drone-kubectl:latest
   settings:
