@@ -37,35 +37,53 @@ steps:
     branch:
     - main
     - dev
-- name: Deploy to Cluster (Dev)
-  pull: always
-  image: dhawton/drone-kubectl:latest
-  settings:
-    kubernetes_token:
-      from_secret: kubernetes_token
-    kubernetes_server:
-      from_secret: kubernetes_server
-  commands:
-  - kubectl set image deployment/emailer emailer=gcr.io/addysnip/emailer:${DRONE_COMMIT_SHA:0:8} -n addysnip-dev
-  - kubectl rollout status deployment/emailer -n addysnip-dev
+- name: Update GitOps Repo [Dev]
+  image: dhawton/ktools:latest
+  environment:
+    SSH_KEY:
+      from_secret: PIPELINE_SSH_KEY
+    MANIFEST_HOST: github.com
+    MANIFEST_USER: addysnip
+    MANIFEST_REPO: gitops-app
+    MANIFEST_BRANCH: main
+    IMAGE: gcr.addysnip/addysnip/emailer
+    IMAGE_TAG: ${DRONE_COMMIT_SHA:0:8}
+    KUSTOMIZE_PATH: addysnip/overlays/dev
   when:
     event:
     - push
     branch:
     - dev
-- name: Deploy to Cluster (Prod)
-  pull: always
-  image: dhawton/drone-kubectl:latest
-  settings:
-    kubernetes_token:
-      from_secret: kubernetes_token
-    kubernetes_server:
-      from_secret: kubernetes_server
-  commands:
-  - kubectl set image deployment/emailer emailer=gcr.io/addysnip/emailer:${DRONE_COMMIT_SHA:0:8} -n addysnip
-  - kubectl rollout status deployment/emailer -n addysnip
+- name: Update GitOps Repo [Prod]
+  image: dhawton/ktools:latest
+  environment:
+    SSH_KEY:
+      from_secret: PIPELINE_SSH_KEY
+    MANIFEST_HOST: github.com
+    MANIFEST_USER: addysnip
+    MANIFEST_REPO: gitops-app
+    MANIFEST_BRANCH: main
+    IMAGE: gcr.addysnip/addysnip/emailer
+    IMAGE_TAG: ${DRONE_COMMIT_SHA:0:8}
+    KUSTOMIZE_PATH: addysnip
   when:
     event:
     - push
     branch:
     - main
+- name: Slack Webhook
+  image: plugins/slack
+  settings:
+    webhook:
+      from_secret: slack_webhook
+    channel: drone-messages
+    template: >
+      {{#success build.status}}
+        Success! Build #{{build.number}} for {{repo.name}}, event {{build.event}}, on {{build.branch}} succeeded. {{build.status}}
+      {{else}}
+        Uh-Oh! Build #{{build.number}} for {{repo.name}}, event {{build.event}}, on {{build.branch}} failed. <@everyone>
+      {{/success}}
+  when:
+    status:
+    - success
+    - failure
