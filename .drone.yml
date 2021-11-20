@@ -46,7 +46,7 @@ steps:
     MANIFEST_USER: addysnip
     MANIFEST_REPO: gitops-app
     MANIFEST_BRANCH: main
-    IMAGE: gcr.addysnip/addysnip/emailer
+    IMAGE: gcr.io/addysnip/addysnip/emailer
     IMAGE_TAG: ${DRONE_COMMIT_SHA:0:8}
     KUSTOMIZE_PATH: addysnip/overlays/dev
   when:
@@ -63,7 +63,7 @@ steps:
     MANIFEST_USER: addysnip
     MANIFEST_REPO: gitops-app
     MANIFEST_BRANCH: main
-    IMAGE: gcr.addysnip/addysnip/emailer
+    IMAGE: gcr.io/addysnip/addysnip/emailer
     IMAGE_TAG: ${DRONE_COMMIT_SHA:0:8}
     KUSTOMIZE_PATH: addysnip
   when:
