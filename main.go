@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"addysnip.dev/api/pkg/logger"
+	"addysnip.dev/api/pkg/utils"
 	"addysnip.dev/emailer/cmd/consumer"
 	"addysnip.dev/emailer/cmd/migrate"
-	"addysnip.dev/emailer/pkg/logger"
 	"addysnip.dev/emailer/pkg/version"
 	"github.com/common-nighthawk/go-figure"
 	"github.com/joho/godotenv"
@@ -49,6 +50,9 @@ func main() {
 				fmt.Printf("%s\n", intro[i])
 			}
 			fmt.Printf("Addysnip Emailer Service %s\n", version.FriendlyVersion())
+
+			logger.DiscordURL = utils.Getenv("DISCORD_ERROR_WEBHOOK_URL", "")
+
 			logger.Category("main").Info("Checking for .env, if exists, will load")
 			if _, err := os.Stat(".env"); err == nil {
 				logger.Category("main").Debug("Loading .env")

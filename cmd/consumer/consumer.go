@@ -3,9 +3,9 @@ package consumer
 import (
 	"fmt"
 
+	"addysnip.dev/api/pkg/logger"
 	"addysnip.dev/api/pkg/utils"
 	"addysnip.dev/emailer/cmd/migrate"
-	"addysnip.dev/emailer/pkg/logger"
 	"addysnip.dev/emailer/pkg/mailer"
 	"github.com/streadway/amqp"
 	"github.com/urfave/cli/v2"

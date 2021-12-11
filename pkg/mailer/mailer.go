@@ -8,8 +8,8 @@ import (
 	"net/url"
 
 	"addysnip.dev/api/pkg/database"
+	"addysnip.dev/api/pkg/logger"
 	"addysnip.dev/api/pkg/utils"
-	"addysnip.dev/emailer/pkg/logger"
 	models "addysnip.dev/types/database"
 )
 
