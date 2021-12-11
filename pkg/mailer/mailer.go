@@ -5,10 +5,11 @@ import (
 	"encoding/json"
 	"html/template"
 	"net/smtp"
+	"net/url"
 
 	"addysnip.dev/api/pkg/database"
+	"addysnip.dev/api/pkg/logger"
 	"addysnip.dev/api/pkg/utils"
-	"addysnip.dev/emailer/pkg/logger"
 	models "addysnip.dev/types/database"
 )
 
@@ -26,8 +27,6 @@ func Handle(body string) error {
 	if err != nil {
 		return err
 	}
-
-	log.Debug("payload: %+v", payload)
 
 	tem, err := FindTemplate(payload.Template)
 	if err != nil {
@@ -47,6 +46,10 @@ func Handle(body string) error {
 	return nil
 }
 
+func urlEscape(text string) string {
+	return url.QueryEscape(text)
+}
+
 func FindTemplate(name string) (*models.Template, error) {
 	tem := models.Template{}
 	if err := database.DB.Where("name = ?", name).First(&tem).Error; err != nil {
@@ -57,7 +60,9 @@ func FindTemplate(name string) (*models.Template, error) {
 }
 
 func BuildTemplate(tmpl models.Template, name string, data map[string]interface{}) (*bytes.Buffer, error) {
-	t, err := template.New(name).Parse(tmpl.Body)
+	t, err := template.New(name).Funcs(template.FuncMap{
+		"urlEscape": urlEscape,
+	}).Parse(tmpl.Body)
 	if err != nil {
 		log.Error("Error parsing template %s: %s", name, err)
 		return nil, err

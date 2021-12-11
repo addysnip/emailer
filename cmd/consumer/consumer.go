@@ -3,9 +3,9 @@ package consumer
 import (
 	"fmt"
 
+	"addysnip.dev/api/pkg/logger"
 	"addysnip.dev/api/pkg/utils"
 	"addysnip.dev/emailer/cmd/migrate"
-	"addysnip.dev/emailer/pkg/logger"
 	"addysnip.dev/emailer/pkg/mailer"
 	"github.com/streadway/amqp"
 	"github.com/urfave/cli/v2"
@@ -45,12 +45,12 @@ func Run(c *cli.Context) error {
 	}
 
 	q, err := ch.QueueDeclare(
-		"emailer", // name
-		true,      // durable
-		false,     // delete when unused
-		false,     // exclusive
-		false,     // no-wait
-		nil,       // arguments
+		utils.Getenv("RABBITMQ_QUEUE", "emailer"), // name
+		true,  // durable
+		false, // delete when unused
+		false, // exclusive
+		false, // no-wait
+		nil,   // arguments
 	)
 	if err != nil {
 		return err

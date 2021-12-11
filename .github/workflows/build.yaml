@@ -1,0 +1,97 @@
+name: Build
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+env:
+  SERVICE_NAME: emailer
+  PROJECT_ID: ${{ secrets.GAR_PROJECT_ID }}
+  GOPRIVATE: addysnip.dev
+
+jobs:
+  build:
+    name: Build Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Google Auth
+        uses: google-github-actions/auth@v0
+        id: auth
+        with:
+          credentials_json: ${{ secrets.GAR_SERVICE_ACCOUNT_KEY}}
+      - name: Setup gcloud cli
+        uses: google-github-actions/setup-gcloud@v0.3.0
+        with:
+          project_id: ${{ secrets.GAR_PROJECT_ID }}
+      - run: git config --global url.https://${{ secrets.GH_PIPELINE_PAT }}@github.com/.insteadOf https://github.com/
+      - name: Setup Golang
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17.5
+      - name: Test
+        run: go test
+      - name: Build
+        run: make build
+      - name: Build Image
+        run: |-
+          HASH=`echo ${GITHUB_SHA} | cut -c1-8`
+          docker build -t gcr.io/$PROJECT_ID/$SERVICE_NAME:$HASH .
+      - name: Push Image
+        if: ${{ github.event_name == 'push' }}
+        run: |-
+          HASH=`echo ${GITHUB_SHA} | cut -c1-8`
+          gcloud auth configure-docker -q
+          docker push gcr.io/$PROJECT_ID/$SERVICE_NAME:$HASH
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    needs: build
+    if: ${{ github.event_name == 'push' && contains(fromJson('["refs/heads/dev","refs/heads/main"]'), github.ref) }}
+
+    steps:
+    - name: Checkout Gitops Code
+      uses: actions/checkout@v2
+      with:
+        repository: 'addysnip/gitops-app'
+        token: ${{ secrets.GH_PIPELINE_PAT }}
+        path: gitops
+    - name: Configure git
+      run: |-
+        cd $GITHUB_WORKSPACE/gitops/addysnip/overlays/dev
+        git config user.email pipeline@addysnip.com
+        git config user.name ${{ secrets.GH_PIPELINE_USER }}
+    - name: Setup kustomize
+      uses: imranismail/setup-kustomize@v1
+      with:
+        kustomize-version: "4.4.1"
+    - name: Update manifests [dev]
+      if: ${{ github.ref == 'refs/heads/dev' }}
+      run: |
+        HASH=`echo ${GITHUB_SHA} | cut -c1-8`
+        cd $GITHUB_WORKSPACE/gitops/addysnip/overlays/dev
+        kustomize edit set image gcr.io/$PROJECT_ID/$SERVICE_NAME=gcr.io/$PROJECT_ID/$SERVICE_NAME:$HASH
+        cat kustomization.yaml
+    - name: Update manifests [main]
+      if: ${{ github.ref == 'refs/heads/main' }}
+      run: |
+        HASH=`echo ${GITHUB_SHA} | cut -c1-8`
+        cd $GITHUB_WORKSPACE/gitops/addysnip/base
+        kustomize edit set image gcr.io/$PROJECT_ID/$SERVICE_NAME=gcr.io/$PROJECT_ID/$SERVICE_NAME:$HASH
+        cat kustomization.yaml
+    - name: Commit manifests changes
+      run: |
+        HASH=`echo ${GITHUB_SHA} | cut -c1-8`
+        cd $GITHUB_WORKSPACE/gitops
+        git add *
+        git commit -m "Bump tag for $SERVICE_NAME $HASH"
+    - name: Push changes
+      run: |
+        cd $GITHUB_WORKSPACE/gitops
+        git push origin main
